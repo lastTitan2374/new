@@ -1,0 +1,85 @@
+#voice recognition code
+import numpy as np
+import scipy.spatial.distance as distance
+import pyaudio
+from fastdtw import fastdtw
+
+def record_audio(seconds=3, sample_rate=44100):
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16,
+                    channels=1,
+                    rate=sample_rate,
+                    input=True,
+                    frames_per_buffer=1024)
+
+    print("Recording... Speak now.")
+    frames = []
+    for i in range(0, int(sample_rate / 1024 * seconds)):
+        data = stream.read(1024)
+        frames.append(np.frombuffer(data, dtype=np.int16))
+
+    print("Recording complete.")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    return np.concatenate(frames)
+
+def extract_features(audio_data):
+    # Dummy feature extraction (you may use more sophisticated methods)
+    return np.mean(audio_data, axis=0)
+
+def perform_authentication(enrollment_audio, verification_audio, threshold=2000):
+    # Extract features
+    enrollment_features = extract_features(enrollment_audio)
+    verification_features = extract_features(verification_audio)
+
+    # Calculate DTW distance
+    distance_dtw, _ = fastdtw(enrollment_features, verification_features, dist=distance.euclidean)
+
+    print("DTW Distance:", distance_dtw)
+
+    # Compare with threshold
+    if distance_dtw < threshold:
+        print("Authentication successful!")
+    else:
+        print("Authentication failed.")
+
+# Example Usage
+# 1. Enroll a user
+enrollment_audio = record_audio()
+print("User enrolled.")
+
+# 2. Authenticate the user
+verification_audio = record_audio()
+print("Authentication attempt...")
+
+# 3. Perform authentication
+perform_authentication(enrollment_audio, verification_audio)
+
+
+#speech to text code
+import speech_recognition as sr
+
+def recognize_speech():
+    # Create a recognizer instance
+    recognizer = sr.Recognizer()
+
+    # Capture audio from the microphone
+    with sr.Microphone() as source:
+        print("Say something:")
+        recognizer.adjust_for_ambient_noise(source, duration=1)  # Adjust for ambient noise
+        audio = recognizer.listen(source, timeout=5)
+
+    try:
+        # Use Google Web Speech API for recognition
+        text = recognizer.recognize_google(audio)
+        print("You said: {}".format(text))
+    except sr.UnknownValueError:
+        print("Speech Recognition could not understand audio")
+    except sr.RequestError as e:
+        print("Could not request results from Google Speech Recognition service; {}".format(e))
+
+# Run the function
+recognize_speech()
+
